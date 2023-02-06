@@ -1,135 +1,155 @@
-// Copyright (c) FIRST and other WPILib contributors.
-// Open Source Software; you can modify and/or share it under the terms of
-// the WPILib BSD license file in the root directory of this project.
-
 package frc.robot;
 
-/**
- * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
- * constants. This class should not be used for any other purpose. All constants should be declared
- * globally (i.e. public static). Do not put anything functional in this class.
- *
- * It is advised to statically import this class (or one of its inner classes) wherever the
- * constants are needed, to reduce verbosity.
- */
+import com.ctre.phoenix.motorcontrol.NeutralMode;
+
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.math.util.Units;
+import frc.lib.util.COTSFalconSwerveConstants;
+import frc.lib.util.SwerveModuleConstants;
+
 public final class Constants {
-  public static final class DriveConstants {
-    public static final int kLEFT_MOTOR_PORT = 0;
-    public static final int kRIGHT_MOTOR_PORT = 1;
+    public static final double stickDeadband = 0.15;
+
+    public static final class Swerve {
+        //public static final int pigeonID = 1;
+        public static final int gyroID = 1;             // not needed for navx, but keep it
+                                                        // universal
+        public static final boolean invertGyro = true;
+        // was: public static final boolean invertGyro = false; // Always ensure Gyro is CCW+ CW-
+
+        public static final double VCC = 4.9;              // Full scale volts for analog input
+        public static final double ANALOG_ENCODER_DEG_PER_VOLT = 360/VCC;
+
+        public static final COTSFalconSwerveConstants chosenModule =  
+            COTSFalconSwerveConstants.SDSMK4(COTSFalconSwerveConstants.driveGearRatios.SDSMK4_L2);
+
+        /* Drivetrain Constants */
+        public static final double trackWidth = Units.inchesToMeters(21.0); 
+        public static final double wheelBase = Units.inchesToMeters(25.0); 
+        public static final double wheelCircumference = chosenModule.wheelCircumference;
+
+        /* Swerve Kinematics 
+         * No need to ever change this unless you are not doing a traditional rectangular/square 4 module swerve */
+         public static final SwerveDriveKinematics swerveKinematics = new SwerveDriveKinematics(
+            new Translation2d(wheelBase / 2.0, trackWidth / 2.0),
+            new Translation2d(wheelBase / 2.0, -trackWidth / 2.0),
+            new Translation2d(-wheelBase / 2.0, trackWidth / 2.0),
+            new Translation2d(-wheelBase / 2.0, -trackWidth / 2.0));
+
+        /* Module Gear Ratios */
+        public static final double driveGearRatio = chosenModule.driveGearRatio;
+        public static final double angleGearRatio = chosenModule.angleGearRatio;
+
+        /* Motor Inverts */
+        public static final boolean angleMotorInvert = chosenModule.angleMotorInvert;
+        public static final boolean driveMotorInvert = chosenModule.driveMotorInvert;
+
+        /* Angle Encoder Invert */
+        public static final boolean canCoderInvert = chosenModule.canCoderInvert;
+
+        /* Swerve Current Limiting */
+        public static final int angleContinuousCurrentLimit = 25;
+        public static final int anglePeakCurrentLimit = 40;
+        public static final double anglePeakCurrentDuration = 0.1;
+        public static final boolean angleEnableCurrentLimit = true;
+
+        public static final int driveContinuousCurrentLimit = 35;
+        public static final int drivePeakCurrentLimit = 60;
+        public static final double drivePeakCurrentDuration = 0.1;
+        public static final boolean driveEnableCurrentLimit = true;
+
+        /* These values are used by the drive falcon to ramp in open loop and closed loop driving.
+         * We found a small open loop ramp (0.25) helps with tread wear, tipping, etc */
+        public static final double openLoopRamp = 0.25;
+        public static final double closedLoopRamp = 0.0;
+
+        /* Angle Motor PID Values */
+        public static final double angleKP = chosenModule.angleKP;
+        public static final double angleKI = chosenModule.angleKI;
+        public static final double angleKD = chosenModule.angleKD;
+        public static final double angleKF = chosenModule.angleKF;
+
+        /* Drive Motor PID Values */
+        public static final double driveKP = 0.05; //TODO: This must be tuned to specific robot
+        public static final double driveKI = 0.0;
+        public static final double driveKD = 0.0;
+        public static final double driveKF = 0.0;
+
+        /* Drive Motor Characterization Values 
+         * Divide SYSID values by 12 to convert from volts to percent output for CTRE */
+        public static final double driveKS = (0.32 / 12); //TODO: This must be tuned to specific robot
+        public static final double driveKV = (1.51 / 12);
+        public static final double driveKA = (0.27 / 12);
+
+        /* Swerve Profiling Values */
+        /** Meters per Second */
+        public static final double maxSpeed = 4.96;
+        /** Radians per Second */
+        public static final double maxAngularVelocity = 11.96;
+
+        /* Neutral Modes */
+        // was: public static final NeutralMode angleNeutralMode = NeutralMode.Coast;
+        public static final NeutralMode angleNeutralMode = NeutralMode.Brake;
+        public static final NeutralMode driveNeutralMode = NeutralMode.Brake;
+
+        /* Module Specific Constants */
+        /* Front Left Module - Module 0 */
+        public static final class Mod0 {
+            public static final int driveMotorID = 12;
+            public static final int angleMotorID = 11;
+            public static final int absEncoderID = 3;
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(130.760);
+            public static final SwerveModuleConstants constants = 
+                new SwerveModuleConstants(driveMotorID, angleMotorID, absEncoderID, angleOffset);
+        }
+
+        /* Front Right Module - Module 1 */
+        public static final class Mod1 {
+            public static final int driveMotorID = 14;
+            public static final int angleMotorID = 13;
+            public static final int absEncoderID = 2;
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(135.603);
+            public static final SwerveModuleConstants constants = 
+                new SwerveModuleConstants(driveMotorID, angleMotorID, absEncoderID, angleOffset);
+        }
+        
+        /* Back Left Module - Module 2 */
+        public static final class Mod2 {
+            public static final int driveMotorID = 16;
+            public static final int angleMotorID = 15;
+            public static final int absEncoderID = 1;
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(-170.317);
+            public static final SwerveModuleConstants constants = 
+                new SwerveModuleConstants(driveMotorID, angleMotorID, absEncoderID, angleOffset);
+        }
+
+        /* Back Right Module - Module 3 */
+        public static final class Mod3 {
+            public static final int driveMotorID = 18;
+            public static final int angleMotorID = 17;
+            public static final int absEncoderID = 0;
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(98.473);
+            public static final SwerveModuleConstants constants = 
+                new SwerveModuleConstants(driveMotorID, angleMotorID, absEncoderID, angleOffset);
+        }
+    }
+
+    public static final class AutoConstants { //TODO: The below constants are used in the example auto, and must be tuned to specific robot
+        public static final double kMaxSpeedMetersPerSecond = 3;
+        public static final double kMaxAccelerationMetersPerSecondSquared = 3;
+        public static final double kMaxAngularSpeedRadiansPerSecond = Math.PI;
+        public static final double kMaxAngularSpeedRadiansPerSecondSquared = Math.PI;
     
-    public static final int kLEFT_ENCODER_PORT_A = 4;
-    public static final int kLEFT_ENCODER_PORT_B = 5;
-    public static final int kRIGHT_ENCODER_PORT_A = 6;
-    public static final int kRIGHT_ENCODER_PORT_B = 7;
-    public static final boolean kLEFT_ENCODER_REVERSED = false;
-    public static final boolean kRIGHT_ENCODER_REVERSED = true;
-
-    // Romi encoders are directly mounted on the motor shafts, 
-    // CPR = 12. Gear ration = 120:1, for WheelCPR = 1440.
-    public static final double kCOUNTS_PER_REV = 1440.0;
-    public static final double kWHEEL_DIA_INCH = 2.75591; // 70 mm
-    public static final double kENCODER_INCHES_PER_ROMI_PULSE = 
-          (Math.PI * kWHEEL_DIA_INCH) / kCOUNTS_PER_REV; // Units: inches
-
-    public static final boolean kGYRO_REVERSED = false;
-
-    public static final double kDRIVE_STABIL_P = 1;
-    public static final double kDRIVE_STABIL_I = 0.05;
-    public static final double kDRIVE_STABIL_D = 0;
-
-    public static final double kDRIVE_DIST_P = 1;
-    public static final double kDRIVE_DIST_I = 0.005;
-    public static final double kDRIVE_DIST_D = 0;
-
-    public static final double kDIST_TOLERANCE = 1.1; // 1.1 inches is close enough
-    public static final double kMAX_TRAVEL_RATE_IN_PER_S = 60; // inches per second
-    public static final double kTRAVEL_RATE_TOLERANCE_IN_PER_S = 10; // inches per second
-    public static final double kMAX_TRAVEL_ACCEL_IN_PER_S_SQ = 300; // inches per second squared
-
-    public static final double kTURN_P = 1;
-    public static final double kTURN_I = 0;
-    public static final double kTURN_D = 0;
-
-    public static final double kTURN_TOLERANCE_DEG = 1.5;
-    public static final double kMAX_TURN_RATE_DEG_PER_S = 100;
-    public static final double kTURN_RATE_TOLERANCE_DEG_PER_S = 10; // degrees per second
-    public static final double kMAX_TURN_ACCEL_DEG_PER_S_SQ = 300;
-  }
-
-  public static final class OIConstants {
-  /*
-      Enum values for controller axis inputs
-      Represents an axis on an XboxController:
-      public enum Axis {
-        kLeftX(0),
-        kLeftY(1),
-        kLeftTrigger(2),
-        kRightTrigger(3),
-        kRightX(4),
-        kRightY(5);
-      }
-  */
-    public static final int kXBOX_LEFT_STICK_LR_AXIS = 0;
-    public static final int kXBOX_LEFT_STICK_FB_AXIS = 1;
-    public static final int kXBOX_LEFT_TRIGGER_AXIS = 2;
-    public static final int kXBOX_RIGHT_TIGGER_AXIS = 3;
-    public static final int kXBOX_RIGHT_STICK_LR_AXIS = 4;
-    public static final int kXBOX_RIGHT_STICK_FB_AXIS = 5;
-
-    public static final int kDRIVE_Y_AXIS = kXBOX_LEFT_STICK_FB_AXIS;
-    public static final int kDRIVE_X_AXIS = kXBOX_LEFT_STICK_LR_AXIS;
-    public static final int kROTATE_AXIS = kXBOX_RIGHT_STICK_LR_AXIS;
-
-    /*
-      Enum values for controller BUTTONS. 
-      Use is m_XboxController.Button.EnumSymbolic. A specific example is:
-        m_Xbox.Button.kA (for the A button)
-      
-      This enum list is already defined in XboxController class, so use as is:
-      
-      public enum Button {
-        kA(1),
-        kB(2),
-        kX(3),
-        kY(4),
-        kLeftBumper(5),
-        kRightBumper(6),
-        kBack(7),
-        kStart(8),
-        kLeftStick(9),
-        kRightStick(10);
-      }
-
-      To Make use of the RUMBLE feedback function, use the following:
-        m_Xbox.setRumble(RumbleType.kLeftRumble, amplitudeValue);
-        m_Xbox.setRumble(RumbleType.kRightRumble, amplitudeValue);
-      where
-        Left runble is weaker, higher frequency runble
-        Right rumble is a stronger, lower frequency runble
-        and amplitudeValue can range from 0 (off) to 1.0 (max amplitude), for the specified side
-*/
-    public static final int kXBOX_A_BUTTON = 0;
-    public static final int kXBOX_B_BUTTON = 1;
-    public static final int kXBOX_X_BUTTON = 2;
-    public static final int kXBOX_Y_BUTTON = 3;
-    public static final int kXBOX_RIGHT_BUMPER_BUTTON = 4;
-    public static final int kXBOX_LEFT_BUMPER_BUTTON = 5;
-    public static final int kXBOX_BACK_BUTTON = 6;
-    public static final int kXBOX_START_BUTTON = 7;
-    public static final int kXBOX_LEFT_STICK_BUTTON = 12;
-    public static final int kXBOX_RIGHT_STICK_BUTTON = 11;
-
-
-    public static final int kGAME_CONTROLLER_PORT = 0;
-    public static final int kDRIVE_JOYSTICK_AXIS = 1;
-    public static final int kROTATE_JOYSTICK_AXIS = 4;
-    public static final double kSLEW_RATE_LIMIT = 10;   /* For use with wpi filter class
-                                                         edu.wpi.first.math.filter.SlewRateLimiter
-                                                         the lower the value, the slower the response
-                                                         the higher the value, the faster the response */
-  }
-  public static final int kDISABLED = 0;
-  public static final int kAUTO = 1;
-  public static final int kTELEOP = 2;
-  public static final int kTEST = 3;
+        public static final double kPXController = 1;
+        public static final double kPYController = 1;
+        public static final double kPThetaController = 1;
+    
+        /* Constraint for the motion profilied robot angle controller */
+        public static final TrapezoidProfile.Constraints kThetaControllerConstraints =
+            new TrapezoidProfile.Constraints(
+                kMaxAngularSpeedRadiansPerSecond, kMaxAngularSpeedRadiansPerSecondSquared);
+    }
 }
