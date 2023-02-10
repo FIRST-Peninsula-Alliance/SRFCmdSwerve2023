@@ -21,10 +21,10 @@ import frc.robot.subsystems.*;
  */
 public class RobotContainer {
     /* Controllers */
-    private final CommandXboxController driver = new CommandXboxController(0);
+    private final CommandXboxController m_xbox1 = new CommandXboxController(0);
 /*
     WAS:
-    private final Joystick driver = new Joystick(0);
+    private final Joystick m_xbox1 = new Joystick(0);
 
     / * Drive Controls * /
     private final int translationAxis = XboxController.Axis.kLeftY.value;
@@ -32,43 +32,45 @@ public class RobotContainer {
     private final int rotationAxis = XboxController.Axis.kRightX.value;
 
     / * Driver Buttons * /
-    private final JoystickButton zeroGyro = new JoystickButton(driver, XboxController.Button.kY.value);
-    private final JoystickButton robotCentric = new JoystickButton(driver, XboxController.Button.kLeftBumper.value);
+    private final JoystickButton zeroGyro = new JoystickButton(m_xbox1, XboxController.Button.kY.value);
+    private final JoystickButton robotCentric = new JoystickButton(m_xbox1, XboxController.Button.kLeftBumper.value);
 */  // end WAS
 
     /* Subsystems */
-    private final Swerve s_Swerve = new Swerve();
+    private final SwerveSusbystem m_swerveSubsystem = new SwerveSusbystem();
 
 
     /** The container for the robot. Contains subsystems, OI devices, and commands. */
     public RobotContainer() {
 
 /*  WAS:
-        s_Swerve.setDefaultCommand(
+        m_swerveSubsystem.setDefaultCommand(
             new TeleopSwerve(
-                s_Swerve, 
-                () -> -driver.getRawAxis(translationAxis), 
-                () -> -driver.getRawAxis(strafeAxis), 
-                () -> -driver.getRawAxis(rotationAxis), 
+                m_swerveSubsystem, 
+                () -> -m_xbox1.getRawAxis(translationAxis), 
+                () -> -m_xbox1.getRawAxis(strafeAxis), 
+                () -> -m_xbox1.getRawAxis(rotationAxis), 
                 () -> robotCentric.getAsBoolean()
             )
         );
 */
-        s_Swerve.setDefaultCommand(
+        m_swerveSubsystem.setDefaultCommand(
             new TeleopSwerve(
-                s_Swerve,                            // Joystick centric outputs:
-                () -> driver.getLeftY(),             // translate: - fore / + laft
-                () -> driver.getLeftX(),             // strafe: - left / + right
-                () -> driver.getRightX(),            // rotate: - left / + right
+                m_swerveSubsystem,                            // Joystick centric outputs:
+                () -> m_xbox1.getLeftY(),             // translate: - fore / + laft
+                () -> m_xbox1.getLeftX(),             // strafe: - left / + right
+                () -> m_xbox1.getRightX()            // rotate: - left / + right
                                                      // Since WPILib wants the exact
                                                      // opposite of all of them,
                                                      // need minus signs - will apply
                                                      // in TeleopSwerve                                        
-                () -> driver.getHID().getLeftBumper()   // left bumper cancels Field 
-                                                        // oriented when held, makes
-                                                        // control "robot centric"
-            )
+             )
         ); 
+
+        // How to pass a button supplier to a command:
+        //  () -> m_xbox1.getHID().getLeftBumper()   // e.g. left bumper cancels Field 
+                                                    // oriented when held, makes control "robot centric"
+                                                    //problem is this makes button binding less "visible"
         // Configure the button bindings
         configureButtonBindings();
     }
@@ -81,9 +83,25 @@ public class RobotContainer {
      */
     private void configureButtonBindings() {
         /* Driver Buttons */
-        // was: zeroGyro.onTrue(new InstantCommand(() -> s_Swerve.zeroGyro()));
-    	driver.back().onTrue(new InstantCommand(() -> s_Swerve.zeroGyro()));
-        driver.start().onTrue(new InstantCommand(() -> s_Swerve.resetModulesToAbsolute())); 
+        // was: zeroGyro.onTrue(new InstantCommand(() -> m_swerveSubsystem.zeroGyro()));
+    	m_xbox1.back().onTrue(new InstantCommand(() -> m_swerveSubsystem.zeroGyro()));
+        m_xbox1.start().onTrue(new InstantCommand(() -> m_swerveSubsystem.resetModulesToAbsolute()));
+        
+        //m_xbox1.a() 
+        //m_xbox1.b() 
+       // m_xbox1.x().onTrue(new InstantCommand(rotatemodulewheels(m_swerveSubsystem, 0)));
+        m_xbox1.y().onTrue(new RotateModulesToAngleCommand(m_swerveSubsystem, 0));
+
+        //m_xbox1.povUp() 
+        //m_xbox1.povLeft() 
+        //m_xbox1.povDown() 
+        //m_xbox1.povRight() 
+        //m_xbox1.leftBumper().OnTrue(new InstantCommand(field oriented toggle));
+        //m_xbox1.rightBumper().OnTrue(new InstantCommand(toggle goSlow)) 
+        //m_xbox1.leftTrigger() 
+        //m_xbox1.rightTrigger()
+        //m_xbox1.leftStick() 
+        //m_xbox1.rightStick() 
     }
 
     /**
@@ -93,6 +111,6 @@ public class RobotContainer {
      */
     public Command getAutonomousCommand() {
         // An ExampleCommand will run in autonomous
-        return new exampleAuto(s_Swerve);
+        return new exampleAuto(m_swerveSubsystem);
     }
 }

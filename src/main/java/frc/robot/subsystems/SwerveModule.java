@@ -7,7 +7,6 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.lib.math.Conversions;
-import frc.lib.util.CTREModuleState;
 import frc.lib.util.SwerveModuleConstants;
 import frc.robot.Constants;
 import frc.robot.Robot;
@@ -20,57 +19,58 @@ import com.ctre.phoenix.motorcontrol.can.TalonFX;
 //import com.ctre.phoenix.sensors.CANCoder;
 
 public class SwerveModule {
-    public int moduleNumber;
-    private Rotation2d angleOffset;
-    private Rotation2d lastAngle;
+    public int m_moduleNum;
+    private Rotation2d m_angleOffset2d;
+    private Rotation2d m_lastAngle2d;
 
-    private TalonFX mAngleMotor;
-    private TalonFX mDriveMotor;
-    //private CANCoder angleEncoder;
-    private AnalogInput angleEncoder;
+    private TalonFX m_angleMotor;
+    private TalonFX m_driveMotor;
+    //private CANCoder m_absAngleEncoder;
+    private AnalogInput m_absAngleEncoder;
 
     SimpleMotorFeedforward feedforward = new SimpleMotorFeedforward(Constants.Swerve.driveKS, Constants.Swerve.driveKV, Constants.Swerve.driveKA);
 
     public SwerveModule(int moduleNumber, SwerveModuleConstants moduleConstants) {
-        this.moduleNumber = moduleNumber;
-        this.angleOffset = moduleConstants.angleOffset;
+        this.m_moduleNum = moduleNumber;
+        this.m_angleOffset2d = moduleConstants.angleOffset2d;
 
-        System.out.println("Initializing Module number "+this.moduleNumber);
-        System.out.println("Angle offset "+moduleConstants.angleOffset);
-        System.out.println("EncoderId "+moduleConstants.absEncoderID);
+        System.out.println("Initializing Module number "+this.m_moduleNum);
+        System.out.println("Angle offset "+moduleConstants.angleOffset2d);
+        System.out.println("EncoderId "+moduleConstants.absAngleEncoderID);
         System.out.println("Angle Motor ID "+moduleConstants.angleMotorID);
         System.out.println("Drive Motor ID "+moduleConstants.driveMotorID);
     
         /* Angle Encoder Config */
-        //was: angleEncoder = new CANCoder(moduleConstants.absEncoderID);
-        //was: configAngleEncoder();
-        angleEncoder = new AnalogInput(moduleConstants.absEncoderID);
+        //was: m_absAngleEncoder = new CANCoder(moduleConstants.absAngleEncoderID);
+        //was: configAbsAngleEncoder();
+        m_absAngleEncoder = new AnalogInput(moduleConstants.absAngleEncoderID);
 
 
         /* Angle Motor Config */
-        mAngleMotor = new TalonFX(moduleConstants.angleMotorID);
+        m_angleMotor = new TalonFX(moduleConstants.angleMotorID);
         configAngleMotor();
         System.out.println("Configuring Angle Motor");
         System.out.println("Motor invert "+Constants.Swerve.driveMotorInvert);
         System.out.println("Neutral mode "+Constants.Swerve.driveNeutralMode);
-        System.out.println("Sensor Position "+mAngleMotor.getSelectedSensorPosition());
+        System.out.println("Sensor Position "+m_angleMotor.getSelectedSensorPosition());
         System.out.println("Angle gear ratio "+Constants.Swerve.angleGearRatio);  
-        System.out.println("Angle Peak Current "+Constants.Swerve.anglePeakCurrentLimit);  
-  
+        System.out.println("Angle Peak Current "+Constants.Swerve.anglePeakCurrentLimit);
+        System.out.println("Angle kP "+Constants.Swerve.angleKP);  
+        System.out.println("Angle kI "+Constants.Swerve.angleKI);  
+        System.out.println("Angle kD "+Constants.Swerve.angleKD);  
+
         /* Drive Motor Config */
-        mDriveMotor = new TalonFX(moduleConstants.driveMotorID);
+        m_driveMotor = new TalonFX(moduleConstants.driveMotorID);
         configDriveMotor();
         System.out.println("Configuring Drive Motor");
         System.out.println("Motor invert "+Constants.Swerve.driveMotorInvert);
         System.out.println("Neutral mode "+Constants.Swerve.driveNeutralMode);
-        System.out.println("Sensor Position "+mAngleMotor.getSelectedSensorPosition());
+        System.out.println("Sensor Position "+m_driveMotor.getSelectedSensorPosition());
 
-        lastAngle = getState().angle;
+        m_lastAngle2d = getState().angle;
     }
 
     public void setDesiredState(SwerveModuleState desiredState, boolean isOpenLoop){
-        /* This is a custom optimize function, since default WPILib optimize assumes continuous controller which CTRE and Rev onboard is not */
-        desiredState = CTREModuleState.optimize(desiredState, getState().angle); 
         setAngle(desiredState);
         setSpeed(desiredState, isOpenLoop);
     }
@@ -78,101 +78,112 @@ public class SwerveModule {
     private void setSpeed(SwerveModuleState desiredState, boolean isOpenLoop){
         if(isOpenLoop){
             double percentOutput = desiredState.speedMetersPerSecond / Constants.Swerve.maxSpeed;
-            mDriveMotor.set(ControlMode.PercentOutput, percentOutput);
+            m_driveMotor.set(ControlMode.PercentOutput, percentOutput);
         }
         else {
             double velocity = Conversions.MPSToFalcon(desiredState.speedMetersPerSecond, Constants.Swerve.wheelCircumference, Constants.Swerve.driveGearRatio);
-            mDriveMotor.set(ControlMode.Velocity, velocity, DemandType.ArbitraryFeedForward, feedforward.calculate(desiredState.speedMetersPerSecond));
+            m_driveMotor.set(ControlMode.Velocity, velocity, DemandType.ArbitraryFeedForward, feedforward.calculate(desiredState.speedMetersPerSecond));
         }
     }
 
     private void setAngle(SwerveModuleState desiredState){
         //Prevent rotating module if speed is less then 1%. Prevents Jittering.
-        Rotation2d angle = (Math.abs(desiredState.speedMetersPerSecond) <= (Constants.Swerve.maxSpeed * 0.01)) ? lastAngle : desiredState.angle; 
+        Rotation2d angle2d = (Math.abs(desiredState.speedMetersPerSecond) <= (Constants.Swerve.maxSpeed * 0.01)) ? m_lastAngle2d : desiredState.angle; 
         
-        mAngleMotor.set(ControlMode.Position, Conversions.degreesToFalcon(angle.getDegrees(), Constants.Swerve.angleGearRatio));
-        lastAngle = angle;
+        m_angleMotor.set(ControlMode.Position, Conversions.degreesToFalcon(angle2d.getDegrees(), Constants.Swerve.angleGearRatio));
+        m_lastAngle2d = angle2d;
+    }
+
+    // This method is intended for use with test commands. It takes an angle in 
+    // degrees, and sets the module to that angle without changing m_lastAngle2d 
+    // (so the module should return to m_lastAngle2d after whatever command is triggering
+    // this method ends).
+    public void rotateToAngle( double angleDeg ) {
+        double targetTics = Conversions.degreesToFalcon(angleDeg, 
+                                        Constants.Swerve.angleGearRatio);
+        m_angleMotor.set(ControlMode.Position, targetTics);
     }
 
     // This gets the angle from the TalonFX integrated encoder, returned as a Rotation2d
     private Rotation2d getAngle(){
-        return Rotation2d.fromDegrees(Conversions.falconToDegrees(mAngleMotor.getSelectedSensorPosition(), Constants.Swerve.angleGearRatio));
+        return Rotation2d.fromDegrees(Conversions.falconToDegrees(m_angleMotor.getSelectedSensorPosition(), Constants.Swerve.angleGearRatio));
     }
 
     public double getRawAbsEncoderDeg() {
         // This method returns the absolute (uncorrected) analog encoder reading
         // in degrees with a range of -179.9999... to 180.
-        double angleDeg = angleEncoder.getVoltage() * Constants.Swerve.ANALOG_ENCODER_DEG_PER_VOLT;
+        double angleDeg = m_absAngleEncoder.getVoltage() * Constants.Swerve.ANALOG_ENCODER_DEG_PER_VOLT;
         return angleDeg;             //(angleDeg > 180.0) ? (angleDeg - 360.0) : angleDeg;
     }
 
     public double getCorrectedAbsEncoderDeg() {
         // This method returns the absolute corrected analog encoder reading
         // in degrees with a range of (-180, 180 ].
-        double angleDeg = getRawAbsEncoderDeg() - angleOffset.getDegrees();
+        double angleDeg = getRawAbsEncoderDeg() - m_angleOffset2d.getDegrees();
         return angleDeg;              //(angleDeg < -180.0) ? (angleDeg + 360.0) : angleDeg;
     }
 
     public double getAvgRawAbsEncoderDeg() {
         // This method returns the absolute (uncorrected) analog encoder reading,
         // averaged for greater stability, in the range -179.9999... to 180.
-        double angleDeg = angleEncoder.getAverageVoltage() * Constants.Swerve.ANALOG_ENCODER_DEG_PER_VOLT;
+        double angleDeg = m_absAngleEncoder.getAverageVoltage() * Constants.Swerve.ANALOG_ENCODER_DEG_PER_VOLT;
         return angleDeg;              //(angleDeg > 180.0) ? (angleDeg - 360.0) : angleDeg;
     }
 
     public void resetToAbsolute() {
-        double absAngleOffsetDeg = getAvgRawAbsEncoderDeg() - angleOffset.getDegrees();
+        double absAngleOffsetDeg = getAvgRawAbsEncoderDeg() - m_angleOffset2d.getDegrees();
         double absolutePosition = Conversions.degreesToFalcon(absAngleOffsetDeg, Constants.Swerve.angleGearRatio);
-        mAngleMotor.setSelectedSensorPosition(absolutePosition);
+        m_angleMotor.setSelectedSensorPosition(absolutePosition);
 
         double readBackPos = this.getAngle().getDegrees();
-        SmartDashboard.putString("Start "+this.moduleNumber, 
+        SmartDashboard.putString("Start "+this.m_moduleNum, 
                                  " AbsEncoderOffset = "+String.format("%.1f", absAngleOffsetDeg)+
-                                 " with Readback error of "+(readBackPos - absAngleOffsetDeg));
-        lastAngle = Rotation2d.fromDegrees(absAngleOffsetDeg);
+                                 " with Readback error of "+String.format("%.1f", (readBackPos - absAngleOffsetDeg)));
+        m_lastAngle2d = Rotation2d.fromDegrees(absAngleOffsetDeg);
     }
+
 /*
     // Not needed when The Thrifty bot Analog encoder is used
-    private void configAngleEncoder(){        
-        //angleEncoder.configFactoryDefault();
-        //angleEncoder.configAllSettings(Robot.ctreConfigs.swerveCanCoderConfig);
+    private void configAbsAngleEncoder(){        
+        //m_absAngleEncoder.configFactoryDefault();
+        //m_absAngleEncoder.configAllSettings(Robot.ctreConfigs.swerveCanCoderConfig);
     }
 */
     private void configAngleMotor() {
         ErrorCode e_code;
-        mAngleMotor.configFactoryDefault();     // could check error code here
+        m_angleMotor.configFactoryDefault();     // could check error code here
         for (int i = 0; i<5; ++i) {
-            e_code = mAngleMotor.configAllSettings(Robot.ctreConfigs.swerveAngleFXConfig);
+            e_code = m_angleMotor.configAllSettings(Robot.ctreConfigs.swerveAngleFXConfig);
             if (e_code != ErrorCode.OK ) {
-                System.out.println("Module "+this.moduleNumber+" failed to initialize "+e_code.toString());
+                System.out.println("Module "+this.m_moduleNum+" failed to initialize "+e_code.toString());
             } else {
                 break;
             }
         }
-        mAngleMotor.setInverted(Constants.Swerve.angleMotorInvert);
-        mAngleMotor.setNeutralMode(Constants.Swerve.angleNeutralMode);
+        m_angleMotor.setInverted(Constants.Swerve.angleMotorInvert);
+        m_angleMotor.setNeutralMode(Constants.Swerve.angleNeutralMode);
         resetToAbsolute();
     }
 
     private void configDriveMotor(){  
         ErrorCode e_code;      
-        mDriveMotor.configFactoryDefault();
+        m_driveMotor.configFactoryDefault();
         for (int i = 0; i<5; ++i) {
-            e_code = mAngleMotor.configAllSettings(Robot.ctreConfigs.swerveDriveFXConfig);
+            e_code = m_angleMotor.configAllSettings(Robot.ctreConfigs.swerveDriveFXConfig);
             if (e_code != ErrorCode.OK ) {
-                System.out.println("Module "+this.moduleNumber+" failed to initialize "+e_code.toString());
+                System.out.println("Module "+this.m_moduleNum+" failed to initialize "+e_code.toString());
             } else {
                 break;
             }
         }
-        mDriveMotor.setInverted(Constants.Swerve.driveMotorInvert);
-        mDriveMotor.setNeutralMode(Constants.Swerve.driveNeutralMode);
-        mDriveMotor.setSelectedSensorPosition(0);
+        m_driveMotor.setInverted(Constants.Swerve.driveMotorInvert);
+        m_driveMotor.setNeutralMode(Constants.Swerve.driveNeutralMode);
+        m_driveMotor.setSelectedSensorPosition(0);
     }
 
     public SwerveModuleState getState(){
         return new SwerveModuleState(
-            Conversions.falconToMPS(mDriveMotor.getSelectedSensorVelocity(), 
+            Conversions.falconToMPS(m_driveMotor.getSelectedSensorVelocity(), 
                                     Constants.Swerve.wheelCircumference, 
                                     Constants.Swerve.driveGearRatio), 
             getAngle()
@@ -181,7 +192,7 @@ public class SwerveModule {
 
     public SwerveModulePosition getPosition(){
         return new SwerveModulePosition(
-            Conversions.falconToMeters(mDriveMotor.getSelectedSensorPosition(), Constants.Swerve.wheelCircumference, Constants.Swerve.driveGearRatio), 
+            Conversions.falconToMeters(m_driveMotor.getSelectedSensorPosition(), Constants.Swerve.wheelCircumference, Constants.Swerve.driveGearRatio), 
             getAngle()
         );
     }
